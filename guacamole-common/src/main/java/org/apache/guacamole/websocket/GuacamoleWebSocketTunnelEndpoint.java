@@ -68,6 +68,11 @@ public abstract class GuacamoleWebSocketTunnelEndpoint extends Endpoint {
      */
     private GuacamoleTunnel tunnel;
 
+    /** 
+     * Should caching be enabled or not?
+     */
+    private boolean cacheEnabled = true;
+
     /**
      * This is our blob store. We store blobs along with their hashcode.
      */
@@ -175,28 +180,31 @@ public abstract class GuacamoleWebSocketTunnelEndpoint extends Endpoint {
                             if (!reader.available() || buffer.length() >= BUFFER_SIZE) {
                                 String bufStr = buffer.toString();
 
-                                /** Check if the buffer has blob data.
-                                * We will see if this same blob was sent before. 
-                                * If so, the client must have cached it too.
-                                * So we will send it's hash only. The browser
-                                * client will restore from it's cache.
-                                */
-                                Pattern pattern = Pattern.compile(".blob,(.*?).end");
-                                Matcher matcher = pattern.matcher(bufStr);
-                                // There can be multiple blobs in single buffer.
-                                while (matcher.find())
-                                {
-                                    String blob = ".blob," + matcher.group(1) + ".end";
-                                    int hash = blob.hashCode();
-                                    if (CACHEBLOB.containsKey(hash)){
-                                        // Found blob in cache. replace with hash
-                                        bufStr = bufStr.replace(blob, "<B:"+hash+">");
-                                    }
-                                    else{
-                                        // Not found, store it in our cache for future.
-                                        CACHEBLOB.put(hash, blob);
+                                if (cacheEnabled){
+                                    /** Check if the buffer has blob data.
+                                    * We will see if this same blob was sent before. 
+                                    * If so, the client must have cached it too.
+                                    * So we will send it's hash only. The browser
+                                    * client will restore from it's cache.
+                                    */
+                                    Pattern pattern = Pattern.compile(".blob,(.*?).end");
+                                    Matcher matcher = pattern.matcher(bufStr);
+                                    // There can be multiple blobs in single buffer.
+                                    while (matcher.find())
+                                    {
+                                        String blob = ".blob," + matcher.group(1) + ".end";
+                                        int hash = blob.hashCode();
+                                        if (CACHEBLOB.containsKey(hash)){
+                                            // Found blob in cache. replace with hash
+                                            bufStr = bufStr.replace(blob, "<B:"+hash+">");
+                                        }
+                                        else{
+                                            // Not found, store it in our cache for future.
+                                            CACHEBLOB.put(hash, blob);
+                                        }
                                     }
                                 }
+                                
                                 remote.sendText(bufStr);
                                 buffer.setLength(0);
                                 

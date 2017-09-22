@@ -22,6 +22,12 @@ var Guacamole = Guacamole || {};
 // This is our blob store
 window.CACHEBLOB = {};
 
+// for showing bandwidth meter
+var smoothie = new SmoothieChart({minValue:0, maxValue:1000, interpolation:'step'});
+smoothie.streamTo(document.getElementById("bandwidthmeter"));
+var lineSeries = new TimeSeries();
+smoothie.addTimeSeries(lineSeries);
+
 // Java style hashCode for js
 String.prototype.hashCode = function(){
     var hash = 0;
@@ -783,6 +789,9 @@ Guacamole.WebSocketTunnel = function(tunnelURL) {
             var message = event.data;
             var startIndex = 0;
             var elementEnd;
+
+            // send msg length to bandwidth meter
+            lineSeries.append(new Date().getTime(), message.length)
 
             /**
              * First see if we have blobs in this message.
