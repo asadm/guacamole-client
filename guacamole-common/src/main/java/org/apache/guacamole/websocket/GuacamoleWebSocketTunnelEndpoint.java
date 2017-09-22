@@ -41,6 +41,9 @@ import org.apache.guacamole.protocol.GuacamoleStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.regex.*;
+import java.util.HashMap;
+
 /**
  * A WebSocket implementation of GuacamoleTunnel functionality, compatible with
  * the Guacamole.WebSocketTunnel object included with the JavaScript API.
@@ -64,6 +67,12 @@ public abstract class GuacamoleWebSocketTunnelEndpoint extends Endpoint {
      * as reads/writes to this tunnel.
      */
     private GuacamoleTunnel tunnel;
+
+    /**
+     * This is our blob store. We store blobs along with their hashcode.
+     */
+    private HashMap<Integer, String> CACHEBLOB = new HashMap<Integer, String>();
+
     
     /**
      * Sends the given status on the given WebSocket connection and closes the
@@ -164,8 +173,33 @@ public abstract class GuacamoleWebSocketTunnelEndpoint extends Endpoint {
 
                             // Flush if we expect to wait or buffer is getting full
                             if (!reader.available() || buffer.length() >= BUFFER_SIZE) {
-                                remote.sendText(buffer.toString());
+                                String bufStr = buffer.toString();
+
+                                /** Check if the buffer has blob data.
+                                * We will see if this same blob was sent before. 
+                                * If so, the client must have cached it too.
+                                * So we will send it's hash only. The browser
+                                * client will restore from it's cache.
+                                */
+                                Pattern pattern = Pattern.compile(".blob,(.*?).end");
+                                Matcher matcher = pattern.matcher(bufStr);
+                                // There can be multiple blobs in single buffer.
+                                while (matcher.find())
+                                {
+                                    String blob = ".blob," + matcher.group(1) + ".end";
+                                    int hash = blob.hashCode();
+                                    if (CACHEBLOB.containsKey(hash)){
+                                        // Found blob in cache. replace with hash
+                                        bufStr = bufStr.replace(blob, "<B:"+hash+">");
+                                    }
+                                    else{
+                                        // Not found, store it in our cache for future.
+                                        CACHEBLOB.put(hash, blob);
+                                    }
+                                }
+                                remote.sendText(bufStr);
                                 buffer.setLength(0);
+                                
                             }
 
                         }
@@ -246,4 +280,3 @@ public abstract class GuacamoleWebSocketTunnelEndpoint extends Endpoint {
     }
 
 }
-

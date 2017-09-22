@@ -19,6 +19,20 @@
 
 var Guacamole = Guacamole || {};
 
+// This is our blob store
+window.CACHEBLOB = {};
+
+// Java style hashCode for js
+String.prototype.hashCode = function(){
+    var hash = 0;
+    if (this.length == 0) return hash;
+    for (var i = 0; i < this.length; i++) {
+        var char = this.charCodeAt(i);
+        hash = ((hash<<5)-hash)+char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    return hash;
+}
 /**
  * Core object providing abstract communication for Guacamole. This object
  * is a null implementation whose functions do nothing. Guacamole applications
@@ -769,6 +783,27 @@ Guacamole.WebSocketTunnel = function(tunnelURL) {
             var message = event.data;
             var startIndex = 0;
             var elementEnd;
+
+            /**
+             * First see if we have blobs in this message.
+             * If we do, store them along with their hash in our 
+             * cache store for future.
+             */
+            var newBlobs = message.match(/.blob,[\s\S]*?.end/g)
+            for (var i in newBlobs){
+                var b = newBlobs[i]
+                CACHEBLOB[b.hashCode()] = b
+            }
+            
+            // See if any Blob hashcode was sent
+            var cacheBlobs = message.match(/<B:[\s\S]*?>/g) || []
+            for(var i in cacheBlobs){
+                // Find the appropriate blob and replace hashcode with real blob.
+                var cacheID = cacheBlobs[i].replace("<B:","").replace(">","")
+                if (CACHEBLOB[cacheID]){
+                    message = message.replace(cacheBlobs[i], CACHEBLOB[cacheID])
+                }
+            }
 
             var elements = [];
 
