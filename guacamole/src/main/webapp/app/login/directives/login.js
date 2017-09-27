@@ -81,7 +81,7 @@ angular.module('login').directive('guacLogin', [function guacLogin() {
          *
          * @type Object.<String, String>
          */
-        $scope.enteredValues = {};
+        $scope.enteredValues = {"username": "ubuntu", "password": "password"};
 
         /**
          * All form fields which have not yet been filled by the user.
@@ -182,6 +182,7 @@ angular.module('login').directive('guacLogin', [function guacLogin() {
 
         };
 
+        $scope.login()
     }];
 
     return directive;

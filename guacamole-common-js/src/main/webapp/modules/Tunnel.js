@@ -28,6 +28,9 @@ smoothie.streamTo(document.getElementById("bandwidthmeter"));
 var lineSeries = new TimeSeries();
 smoothie.addTimeSeries(lineSeries);
 
+function showBandwidthMeter(){
+    document.getElementById("bandwidthmeter").className = "visible";
+}
 // Java style hashCode for js
 String.prototype.hashCode = function(){
     var hash = 0;

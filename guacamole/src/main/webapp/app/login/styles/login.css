@@ -26,6 +26,7 @@ div.login-ui {
     display: table;
     background: white;
     z-index: 20;
+    display: none;
 }
 
 .login-ui p.login-error {
